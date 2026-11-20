@@ -27,4 +27,8 @@ export const categoryService = {
 
     return response.data;
   },
+
+  remove: async (id: string): Promise<void> => {
+    await api.delete(`/categories/${id}`);
+  },
 };

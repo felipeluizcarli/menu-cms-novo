@@ -1,6 +1,10 @@
 
-import { useCategories } from "../hooks/use-category";
+import { useCategories, useDeleteCategory } from "../hooks/use-category";
+import type { CategoryDTO } from "../dtos/category.dto";
+
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+
 import {
   Table,
   TableBody,
@@ -10,8 +14,20 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-export function CategoryList() {
+interface CategoryListProps {
+  onEdit: (category: CategoryDTO) => void;
+}
+
+export function CategoryList({ onEdit }: CategoryListProps) {
   const { data: categories = [], isLoading, isError } = useCategories();
+
+  const deleteCategory = useDeleteCategory();
+
+  function handleDelete(id: string) {
+    if (confirm("Deseja realmente excluir esta categoria?")) {
+      deleteCategory.mutate(id);
+    }
+  }
 
   if (isLoading) {
     return <p>Carregando categorias...</p>;
@@ -33,6 +49,7 @@ export function CategoryList() {
             <TableHead>Nome</TableHead>
             <TableHead>Ícone</TableHead>
             <TableHead>Situação</TableHead>
+            <TableHead>Ações</TableHead>
           </TableRow>
         </TableHeader>
 
@@ -52,10 +69,37 @@ export function CategoryList() {
                   {category.active ? "Ativa" : "Inativa"}
                 </Badge>
               </TableCell>
+
+              <TableCell>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onEdit(category)}
+                  >
+                    Editar
+                  </Button>
+
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    disabled={deleteCategory.isPending}
+                    onClick={() => handleDelete(category.id)}
+                  >
+                    Excluir
+                  </Button>
+                </div>
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
+
+      {deleteCategory.isError && (
+        <p className="p-4 text-sm text-red-500">
+          Erro ao excluir categoria.
+        </p>
+      )}
     </div>
   );
 }

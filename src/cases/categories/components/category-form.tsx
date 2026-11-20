@@ -1,40 +1,69 @@
 
 import { useState } from "react";
-import type { FormEvent } from "react";
-
+import type { SyntheticEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import {useCreateCategory,useUpdateCategory,} from "../hooks/use-category";
+import type { CategoryDTO } from "../dtos/categories.dto";
 
-import { useCreateCategory } from "../hooks/use-category";
+interface CategoryFormProps {
+  category?: CategoryDTO;
+  onCancel?: () => void;
+}
 
-export function CategoryForm() {
-  const [name, setName] = useState("");
-  const [icon, setIcon] = useState("");
-  const [active, setActive] = useState(true);
+export function CategoryForm({
+  category,
+  onCancel,
+}: CategoryFormProps) {
+  const [name, setName] = useState(category?.name ?? "");
+  const [icon, setIcon] = useState(category?.icon ?? "");
+  const [active, setActive] = useState(category?.active ?? true);
 
   const createCategory = useCreateCategory();
+  const updateCategory = useUpdateCategory();
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  const isEditing = !!category;
+
+  const isPending =
+    createCategory.isPending || updateCategory.isPending;
+
+  const isError =
+    createCategory.isError || updateCategory.isError;
+
+  function handleSubmit(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (!name.trim()) return;
 
-    createCategory.mutate(
-      {
-        name: name.trim(),
-        icon: icon.trim() || undefined,
-        active,
-      },
-      {
+    const data = {
+      name: name.trim(),
+      icon: icon.trim() || undefined,
+      active,
+    };
+
+    if (category) {
+      updateCategory.mutate(
+        {
+          id: category.id,
+          data,
+        },
+        {
+          onSuccess: () => {
+            onCancel?.();
+          },
+        }
+      );
+    } else {
+      createCategory.mutate(data, {
         onSuccess: () => {
           setName("");
           setIcon("");
           setActive(true);
         },
-      }
-    );
+      });
+    }
   }
 
   return (
@@ -74,13 +103,30 @@ export function CategoryForm() {
         <Label htmlFor="active">Categoria ativa</Label>
       </div>
 
-      <Button type="submit" disabled={createCategory.isPending}>
-        {createCategory.isPending ? "Salvando..." : "Cadastrar"}
-      </Button>
+      <div className="flex gap-2">
+        <Button type="submit" disabled={isPending}>
+          {isPending
+            ? "Salvando..."
+            : isEditing
+              ? "Salvar alterações"
+              : "Cadastrar"}
+        </Button>
 
-      {createCategory.isError && (
+        {isEditing && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCancel}
+            disabled={isPending}
+          >
+            Cancelar
+          </Button>
+        )}
+      </div>
+
+      {isError && (
         <p className="text-sm text-red-500">
-          Erro ao cadastrar categoria.
+          Erro ao salvar categoria.
         </p>
       )}
     </form>
